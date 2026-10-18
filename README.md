@@ -39,6 +39,17 @@ Ringkasnya:
 4. Buka `https://username-anda.github.io/nama-repo/`.
 5. Setiap kali push perubahan baru ke `main`, situs otomatis ter-update sendiri — tidak perlu build manual lagi.
 
+## 3b. Mode offline
+Aplikasi ini sudah mendukung **offline (PWA)**. Cukup buka alamat situsnya **sekali dengan internet** — setelah itu semua file tersimpan di perangkat dan aplikasi bisa dibuka tanpa internet (data soal/kelompok/sesi memang sudah tersimpan di browser).
+- Chrome/Edge: klik ikon **Install** di address bar (atau menu ⋮ → *Install Kelas Champions SMP*) agar muncul seperti aplikasi biasa di desktop/IFP.
+- Penting: buka dulu di perangkat yang sama dan browser yang sama dengan yang dipakai di kelas. Jangan hapus data browser (cache/cookies).
+- Saat ada versi baru dan internet menyala, buka aplikasi lalu refresh sekali; versi baru otomatis tersimpan.
+- Menggunakan gambar soal lewat URL internet tetap butuh internet untuk gambar itu saja.
+- Tidak bisa dibuka dengan klik dua kali file `index.html` (file://) — browser memblokir mode offline untuk cara itu. Pakai alamat GitHub Pages, atau jalankan `npm run preview` di komputer sendiri.
+
+## 3c. Input soal lewat Google Sheets
+Guru bisa mengetik soal di Google Sheets dan menyinkronkannya ke aplikasi dengan satu tombol — panduan di **`APPS_SCRIPT.md`**, skripnya di `apps-script/Code.gs`.
+
 ## 4. Catatan penting: penyimpanan data
 Aplikasi ini otomatis memakai **localStorage browser** saat dijalankan di luar Claude — artinya:
 - Data (bank soal, kelompok, pengaturan, riwayat) tersimpan **di browser/komputer masing-masing**, bukan di server terpusat.
