@@ -225,8 +225,10 @@ function pickQuestions(bank, subject, grade, count, opts = {}) {
   // Filter materi (topic), dengan fallback ke seluruh materi mapel & kelas
   // yang sama (tidak pernah keluar dari basePool) jika soal materi tsb kurang.
   let pool = basePool;
-  if (topic) {
-    const byTopic = basePool.filter((q) => q.topic === topic);
+  // topic boleh berupa satu nama materi (string, data lama) atau beberapa materi (array).
+  const topicList = Array.isArray(topic) ? topic : topic ? [topic] : [];
+  if (topicList.length) {
+    const byTopic = basePool.filter((q) => topicList.includes(q.topic));
     if (byTopic.length > 0) pool = byTopic;
   }
 
@@ -1346,7 +1348,7 @@ function QuickPlaySetup({ state, dispatch, setScreen, practiceMode = false }) {
   const subjects = useMemo(() => getAvailableSubjects(state.questionBank), [state.questionBank]);
   const [subject, setSubject] = useState(null);
   const [grade, setGrade] = useState(null);
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState([]); // daftar materi terpilih; kosong = semua materi
   const [difficulty, setDifficulty] = useState("all");
   const [questionCount, setQuestionCount] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(state.settings.defaultTimerSeconds);
@@ -1354,7 +1356,7 @@ function QuickPlaySetup({ state, dispatch, setScreen, practiceMode = false }) {
   const availableGrades = useMemo(() => (subject ? [...new Set(state.questionBank.filter((q) => q.subject === subject).map((q) => q.grade))].sort() : []), [subject, state.questionBank]);
   const gradeScopedBank = useMemo(() => (subject && grade ? state.questionBank.filter((q) => q.subject === subject && q.grade === grade) : []), [subject, grade, state.questionBank]);
   const availableTopics = useMemo(() => [...new Set(gradeScopedBank.map((q) => q.topic))].sort(), [gradeScopedBank]);
-  const scopedByTopic = useMemo(() => (topic ? gradeScopedBank.filter((q) => q.topic === topic) : gradeScopedBank), [gradeScopedBank, topic]);
+  const scopedByTopic = useMemo(() => (topic.length ? gradeScopedBank.filter((q) => topic.includes(q.topic)) : gradeScopedBank), [gradeScopedBank, topic]);
   const availableCount = useMemo(() => (difficulty !== "all" ? scopedByTopic.filter((q) => q.difficulty === difficulty).length : scopedByTopic.length), [scopedByTopic, difficulty]);
   const questionCountOptions = useMemo(() => { const opts = [5, 10].filter((n) => n <= availableCount); return opts.length ? opts : (availableCount > 0 ? [availableCount] : []); }, [availableCount]);
   const canStart = subject && grade && questionCount && timerSeconds && state.teams.every((g) => g.name.trim().length > 0);
@@ -1374,7 +1376,7 @@ function QuickPlaySetup({ state, dispatch, setScreen, practiceMode = false }) {
         <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>1 · PILIH MATA PELAJARAN</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {subjects.map((s) => (
-            <button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic(""); setDifficulty("all"); setQuestionCount(null); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}>
+            <button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic([]); setDifficulty("all"); setQuestionCount(null); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}>
               <div className="text-2xl mb-1">{s.icon}</div><div className="text-sm font-semibold">{s.label}</div>
             </button>
           ))}
@@ -1385,16 +1387,16 @@ function QuickPlaySetup({ state, dispatch, setScreen, practiceMode = false }) {
       {subject && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
           <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>2 · PILIH KELAS</div>
-          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic(""); setDifficulty("all"); setQuestionCount(null); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
+          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic([]); setDifficulty("all"); setQuestionCount(null); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
         </div>
       )}
 
       {grade && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
-          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · PILIH MATERI</div>
+          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · PILIH MATERI <span className="font-normal opacity-80">(boleh lebih dari satu; kosongkan = semua materi)</span></div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setTopic(""); setQuestionCount(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic === "" ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
-            {availableTopics.map((t) => (<button key={t} onClick={() => { setTopic(t); setQuestionCount(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic === t ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
+            <button onClick={() => { setTopic([]); setQuestionCount(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic.length === 0 ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
+            {availableTopics.map((t) => (<button key={t} onClick={() => { setTopic((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t])); setQuestionCount(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic.includes(t) ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
           </div>
         </div>
       )}
@@ -1438,7 +1440,7 @@ function QuickPlaySetup({ state, dispatch, setScreen, practiceMode = false }) {
         </div>
       </div>
 
-      <button disabled={!canStart} onClick={() => dispatch({ type: "START_QUICKPLAY", payload: { subject, grade, questionCount, timerSeconds, topic: topic || null, difficulty, mode: practiceMode ? "practice" : "quickplay" } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
+      <button disabled={!canStart} onClick={() => dispatch({ type: "START_QUICKPLAY", payload: { subject, grade, questionCount, timerSeconds, topic: topic.length ? topic : null, difficulty, mode: practiceMode ? "practice" : "quickplay" } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
         <Play size={18} /> Mulai Permainan!
       </button>
     </div>
@@ -1452,7 +1454,7 @@ function BoardSetup({ state, dispatch, setScreen }) {
   const subjects = useMemo(() => getAvailableSubjects(state.questionBank), [state.questionBank]);
   const [subject, setSubject] = useState(null);
   const [grade, setGrade] = useState(null);
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState([]); // daftar materi terpilih; kosong = semua materi
   const [difficulty, setDifficulty] = useState("all");
   const [boardSize, setBoardSize] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(state.settings.defaultTimerSeconds);
@@ -1460,7 +1462,7 @@ function BoardSetup({ state, dispatch, setScreen }) {
   const availableGrades = useMemo(() => (subject ? [...new Set(state.questionBank.filter((q) => q.subject === subject).map((q) => q.grade))].sort() : []), [subject, state.questionBank]);
   const gradeScopedBank = useMemo(() => (subject && grade ? state.questionBank.filter((q) => q.subject === subject && q.grade === grade) : []), [subject, grade, state.questionBank]);
   const availableTopics = useMemo(() => [...new Set(gradeScopedBank.map((q) => q.topic))].sort(), [gradeScopedBank]);
-  const scopedByTopic = useMemo(() => (topic ? gradeScopedBank.filter((q) => q.topic === topic) : gradeScopedBank), [gradeScopedBank, topic]);
+  const scopedByTopic = useMemo(() => (topic.length ? gradeScopedBank.filter((q) => topic.includes(q.topic)) : gradeScopedBank), [gradeScopedBank, topic]);
   const availableCount = useMemo(() => (difficulty !== "all" ? scopedByTopic.filter((q) => q.difficulty === difficulty).length : scopedByTopic.length), [scopedByTopic, difficulty]);
   const boardSizePresetOptions = useMemo(() => BOARD_SIZE_PRESETS.filter((n) => n <= availableCount), [availableCount]);
   const canStart = subject && grade && boardSize && boardSize >= BOARD_MIN_SIZE && boardSize <= availableCount && timerSeconds && state.teams.every((g) => g.name.trim().length > 0);
@@ -1479,7 +1481,7 @@ function BoardSetup({ state, dispatch, setScreen }) {
         <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>1 · PILIH MATA PELAJARAN</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {subjects.map((s) => (
-            <button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic(""); setDifficulty("all"); setBoardSize(null); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}>
+            <button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic([]); setDifficulty("all"); setBoardSize(null); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}>
               <div className="text-2xl mb-1">{s.icon}</div><div className="text-sm font-semibold">{s.label}</div>
             </button>
           ))}
@@ -1490,16 +1492,16 @@ function BoardSetup({ state, dispatch, setScreen }) {
       {subject && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
           <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>2 · PILIH KELAS</div>
-          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic(""); setDifficulty("all"); setBoardSize(null); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
+          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic([]); setDifficulty("all"); setBoardSize(null); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
         </div>
       )}
 
       {grade && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
-          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · PILIH MATERI</div>
+          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · PILIH MATERI <span className="font-normal opacity-80">(boleh lebih dari satu; kosongkan = semua materi)</span></div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setTopic(""); setBoardSize(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic === "" ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
-            {availableTopics.map((t) => (<button key={t} onClick={() => { setTopic(t); setBoardSize(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic === t ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
+            <button onClick={() => { setTopic([]); setBoardSize(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic.length === 0 ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
+            {availableTopics.map((t) => (<button key={t} onClick={() => { setTopic((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t])); setBoardSize(null); }} className={`px-5 py-2.5 rounded-xl font-semibold text-xs kc-font-body ${topic.includes(t) ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
           </div>
         </div>
       )}
@@ -1564,7 +1566,7 @@ function BoardSetup({ state, dispatch, setScreen }) {
         </div>
       </div>
 
-      <button disabled={!canStart} onClick={() => dispatch({ type: "START_BOARD", payload: { subject, grade, boardSize, timerSeconds, topic: topic || null, difficulty } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
+      <button disabled={!canStart} onClick={() => dispatch({ type: "START_BOARD", payload: { subject, grade, boardSize, timerSeconds, topic: topic.length ? topic : null, difficulty } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
         <LayoutGrid size={18} /> Buka Papan Kuis!
       </button>
     </div>
@@ -1578,7 +1580,7 @@ function TournamentSetup({ state, dispatch, setScreen }) {
   const subjects = useMemo(() => getAvailableSubjects(state.questionBank), [state.questionBank]);
   const [subject, setSubject] = useState(null);
   const [grade, setGrade] = useState(null);
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState([]); // daftar materi terpilih; kosong = semua materi
   const [difficulty, setDifficulty] = useState("all");
   const [selectedRounds, setSelectedRounds] = useState([...ROUND_ORDER]);
   const availableGrades = useMemo(() => (subject ? [...new Set(state.questionBank.filter((q) => q.subject === subject).map((q) => q.grade))].sort() : []), [subject, state.questionBank]);
@@ -1595,23 +1597,23 @@ function TournamentSetup({ state, dispatch, setScreen }) {
       <div className="kc-card rounded-2xl p-5 mb-4">
         <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>1 · PILIH MATA PELAJARAN</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {subjects.map((s) => (<button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic(""); setDifficulty("all"); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}><div className="text-2xl mb-1">{s.icon}</div><div className="text-sm font-semibold">{s.label}</div></button>))}
+          {subjects.map((s) => (<button key={s.key} onClick={() => { setSubject(s.key); setGrade(null); setTopic([]); setDifficulty("all"); }} className={`rounded-xl p-4 text-center kc-font-body ${subject === s.key ? "kc-chip-active" : "kc-chip"}`}><div className="text-2xl mb-1">{s.icon}</div><div className="text-sm font-semibold">{s.label}</div></button>))}
         </div>
       </div>
 
       {subject && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
           <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>2 · PILIH KELAS</div>
-          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic(""); setDifficulty("all"); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
+          <div className="flex gap-3 flex-wrap">{availableGrades.map((g) => (<button key={g} onClick={() => { setGrade(g); setTopic([]); setDifficulty("all"); }} className={`px-6 py-3 rounded-xl font-semibold text-sm kc-font-body ${grade === g ? "kc-chip-active" : "kc-chip"}`}>Kelas {g}</button>))}</div>
         </div>
       )}
 
       {grade && (
         <div className="kc-card rounded-2xl p-5 mb-4 kc-pop">
-          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · MATERI & KESULITAN (berlaku di seluruh babak)</div>
+          <div className="text-xs font-bold tracking-wide mb-3" style={{ color: "var(--gold-soft)" }}>3 · MATERI & KESULITAN (berlaku di seluruh babak) — materi boleh dipilih lebih dari satu</div>
           <div className="flex gap-2 flex-wrap mb-2">
-            <button onClick={() => setTopic("")} className={`px-4 py-2 rounded-lg font-semibold text-xs kc-font-body ${topic === "" ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
-            {availableTopics.map((t) => (<button key={t} onClick={() => setTopic(t)} className={`px-4 py-2 rounded-lg font-semibold text-xs kc-font-body ${topic === t ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
+            <button onClick={() => setTopic([])} className={`px-4 py-2 rounded-lg font-semibold text-xs kc-font-body ${topic.length === 0 ? "kc-chip-active" : "kc-chip"}`}>Semua Materi</button>
+            {availableTopics.map((t) => (<button key={t} onClick={() => setTopic((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))} className={`px-4 py-2 rounded-lg font-semibold text-xs kc-font-body ${topic.includes(t) ? "kc-chip-active" : "kc-chip"}`}>{t}</button>))}
           </div>
           <div className="flex gap-2 flex-wrap">
             {[{ key: "all", label: "Semua Tingkat" }, { key: "easy", label: "Mudah" }, { key: "medium", label: "Sedang" }, { key: "hard", label: "Sulit" }].map((d) => (
@@ -1647,7 +1649,7 @@ function TournamentSetup({ state, dispatch, setScreen }) {
         </div>
       </div>
 
-      <button disabled={!canStart} onClick={() => dispatch({ type: "START_TOURNAMENT", payload: { subject, grade, selectedRounds, topic: topic || null, difficulty } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
+      <button disabled={!canStart} onClick={() => dispatch({ type: "START_TOURNAMENT", payload: { subject, grade, selectedRounds, topic: topic.length ? topic : null, difficulty } })} className={`w-full py-4 rounded-xl font-bold text-base kc-font-body flex items-center justify-center gap-2 ${canStart ? "kc-btn-gold" : "kc-btn-ghost opacity-40 cursor-not-allowed"}`}>
         <Swords size={18} /> Mulai Turnamen!
       </button>
     </div>
