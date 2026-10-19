@@ -94,6 +94,8 @@ Tidak perlu `npm run build` manual atau upload folder `dist/` — GitHub Actions
 
 ## Troubleshooting
 
+**Actions gagal (❌) dalam ±15 detik, di langkah "Setup Node.js" atau "Install dependencies"** — penyebabnya proyek tidak punya file `package-lock.json`, sedangkan versi lama workflow memakai `cache: npm` dan `npm ci` yang mewajibkannya. Sudah diperbaiki di `deploy.yml` terbaru (memakai `npm install`). Upload ulang `.github/workflows/deploy.yml` lalu jalankan ulang lewat Actions → *Run workflow*.
+
 **Halaman putih kosong setelah dibuka** — biasanya cache browser. Coba refresh paksa (`Ctrl+Shift+R` / `Cmd+Shift+R`), atau buka di jendela incognito.
 
 **Tab Actions menunjukkan tanda silang merah ❌** — klik ke dalam prosesnya, baca pesan error di bagian yang gagal (biasanya "Install dependencies" atau "Build"). Pesan error paling umum: ada file yang gagal ter-upload lengkap di Cara B — pastikan semua file ter-upload lalu commit ulang.
